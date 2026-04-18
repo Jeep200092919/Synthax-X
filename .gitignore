@@ -1,0 +1,5 @@
+bin/
+iso/boot/synthax-x.bin
+*.o
+*.bin
+*.iso
