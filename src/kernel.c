@@ -2,6 +2,7 @@
 #include "kernel.h"
 #include "drivers/vga.h"
 #include "cpu/gdt.h"
+#include "cpu/idt.h"
 
 void kmain(uint32_t magic, uint32_t mb_info) {
     (void)magic;
@@ -13,6 +14,11 @@ void kmain(uint32_t magic, uint32_t mb_info) {
 
     gdt_init();
     vga_write("[ok] gdt loaded\n");
+
+    idt_init();
+    __asm__ volatile ("sti");
+    vga_write("[ok] interrupts enabled\n");
+    vga_write("> ");
 
     for (;;) {
         __asm__ volatile ("hlt");
