@@ -3,6 +3,6 @@
 
 #include <stdint.h>
 
-void kmain(uint32_t magic, uint32_t mb_info);
+void kmain(uint64_t magic, uintptr_t mb_info);
 
 #endif

@@ -47,13 +47,17 @@ extern pml4
 _start:
     mov esp, stack_top
 
-    ; Stash multiboot magic (eax) and info pointer (ebx) into edi/esi so that
-    ; after the long-mode transition they naturally sit in rdi/rsi for the
-    ; System V AMD64 call to kmain(magic, mb_info).
-    mov edi, eax
-    mov esi, ebx
+    ; Preserve multiboot magic (eax) and info pointer (ebx) across
+    ; setup_page_tables, which clobbers eax/ecx/edi. We pop into edi/esi
+    ; afterwards so they naturally sit in rdi/rsi for the 64-bit call
+    ; to kmain(magic, mb_info).
+    push eax
+    push ebx
 
     call setup_page_tables
+
+    pop esi                                  ; mb_info
+    pop edi                                  ; magic
 
     mov eax, pml4
     mov cr3, eax

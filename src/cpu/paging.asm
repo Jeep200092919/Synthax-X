@@ -20,10 +20,13 @@ global setup_page_tables
 
 ; void setup_page_tables(void)
 ;
-; Writes:
-;   PML4[0]  -> PDPT        (present | writable)
-;   PDPT[0]  -> PD          (present | writable)
-;   PD[0]    -> 0x00000000  as a 2 MiB page (present | writable | PS)
+; Builds a 4-level identity map covering the first 64 MiB using 2 MiB pages.
+; This is more than enough to contain the kernel image, the PMM bitmap
+; (~1 MiB for 32 GiB of RAM), and any multiboot2 info GRUB leaves below.
+;
+;   PML4[0]  -> PDPT
+;   PDPT[0]  -> PD
+;   PD[0..31] -> 2 MiB pages at phys 0..64 MiB
 setup_page_tables:
     mov eax, pdpt
     or  eax, 0x3
@@ -35,7 +38,14 @@ setup_page_tables:
     mov [pdpt], eax
     mov dword [pdpt + 4], 0
 
-    mov dword [pd],     0x83        ; present | writable | 2 MiB page, base 0
-    mov dword [pd + 4], 0
+    mov edi, pd
+    mov eax, 0x83                   ; present | writable | 2 MiB page, base 0
+    mov ecx, 32                     ; 32 * 2 MiB = 64 MiB
+.map_loop:
+    mov [edi], eax
+    mov dword [edi + 4], 0
+    add eax, 0x200000               ; next 2 MiB frame
+    add edi, 8
+    loop .map_loop
 
     ret
