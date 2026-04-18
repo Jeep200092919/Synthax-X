@@ -19,8 +19,8 @@ CFLAGS   := -ffreestanding -fno-stack-protector -fno-pic -mno-red-zone \
             -Wall -Wextra -O2 -std=gnu11 -I$(INC_DIR)
 LDFLAGS  := -n -nostdlib -T $(LINKER)
 
-C_SRCS   := $(wildcard $(SRC_DIR)/*.c)
-ASM_SRCS := $(wildcard $(SRC_DIR)/*.asm)
+C_SRCS   := $(shell find $(SRC_DIR) -name '*.c')
+ASM_SRCS := $(shell find $(SRC_DIR) -name '*.asm')
 OBJS     := $(C_SRCS:$(SRC_DIR)/%.c=$(BIN_DIR)/%.o) \
             $(ASM_SRCS:$(SRC_DIR)/%.asm=$(BIN_DIR)/%.o)
 
@@ -28,13 +28,12 @@ OBJS     := $(C_SRCS:$(SRC_DIR)/%.c=$(BIN_DIR)/%.o) \
 
 all: $(KERNEL)
 
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
-
-$(BIN_DIR)/%.o: $(SRC_DIR)/%.c | $(BIN_DIR)
+$(BIN_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(BIN_DIR)/%.o: $(SRC_DIR)/%.asm | $(BIN_DIR)
+$(BIN_DIR)/%.o: $(SRC_DIR)/%.asm
+	@mkdir -p $(dir $@)
 	$(AS) $(ASFLAGS) $< -o $@
 
 $(KERNEL): $(OBJS) $(LINKER)
