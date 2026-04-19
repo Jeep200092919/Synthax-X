@@ -6,6 +6,7 @@
 #include "mem/pmm.h"
 #include "mem/vmm.h"
 #include "mem/heap.h"
+#include "shell/shell.h"
 
 #define MB2_BOOTLOADER_MAGIC 0x36d76289u
 #define HEAP_VIRT_BASE       0x40000000ULL            /* 1 GiB */
@@ -52,29 +53,8 @@ void kmain(uint64_t magic, uintptr_t mb_info) {
     vga_write("[ok] vmm initialized\n");
 
     kheap_setup();
-    vga_write("[ok] heap mapped at ");
-    vga_write_hex(HEAP_VIRT_BASE);
-    vga_write(" (16 MB)\n");
+    vga_write("[ok] heap ready\n");
 
-    /* Stress test: 10 small allocations of varying sizes, write to each, free. */
-    void *ptrs[10];
-    for (int i = 0; i < 10; i++) {
-        size_t sz = (size_t)(32u + (unsigned)i * 48u);
-        ptrs[i] = kmalloc(sz);
-        vga_write("kmalloc(");
-        vga_write_dec(sz);
-        vga_write(") -> ");
-        vga_write_hex((uintptr_t)ptrs[i]);
-        vga_write("\n");
-        /* Verify the mapping is live by writing a sentinel. */
-        for (size_t k = 0; k < sz; k++) ((volatile uint8_t *)ptrs[i])[k] = (uint8_t)(i + k);
-    }
-    for (int i = 0; i < 10; i++) kfree(ptrs[i]);
-    vga_write("[ok] 10 alloc/free cycles complete\n");
-
-    vga_write("> ");
-
-    for (;;) {
-        __asm__ volatile ("hlt");
-    }
+    shell_init();
+    shell_run();
 }

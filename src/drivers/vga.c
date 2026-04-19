@@ -45,6 +45,14 @@ void vga_putc(char c) {
         cur_col = 0;
     } else if (c == '\t') {
         cur_col = (uint8_t)((cur_col + 4) & ~3);
+    } else if (c == '\b') {
+        if (cur_col > 0) {
+            cur_col--;
+        } else if (cur_row > 0) {
+            cur_row--;
+            cur_col = VGA_WIDTH - 1;
+        }
+        VGA_BUFFER[cur_row * VGA_WIDTH + cur_col] = vga_entry(' ', cur_color);
     } else {
         VGA_BUFFER[cur_row * VGA_WIDTH + cur_col] = vga_entry(c, cur_color);
         cur_col++;

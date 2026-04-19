@@ -1,11 +1,12 @@
 #include <stdint.h>
 #include "drivers/keyboard.h"
-#include "drivers/vga.h"
 #include "cpu/io.h"
 
 #define KBD_DATA 0x60
 
-/* US QWERTY scancode set 1 -> ASCII. 0 means non-printable. */
+#define RING_SIZE 256
+#define RING_MASK (RING_SIZE - 1)
+
 static const char kbd_us_lower[128] = {
     0,   27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', '\b',
     '\t','q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n',
@@ -26,16 +27,37 @@ static const char kbd_us_upper[128] = {
 
 static int shift_held = 0;
 
+static volatile char     ring[RING_SIZE];
+static volatile uint32_t ring_head;
+static volatile uint32_t ring_tail;
+
 void keyboard_handle_irq(void) {
     uint8_t sc = inb(KBD_DATA);
 
-    /* Left shift press/release = 0x2A / 0xAA, right shift = 0x36 / 0xB6. */
     if (sc == 0x2A || sc == 0x36) { shift_held = 1; return; }
     if (sc == 0xAA || sc == 0xB6) { shift_held = 0; return; }
-
-    /* Ignore other key releases (bit 7 set). */
-    if (sc & 0x80) return;
+    if (sc & 0x80) return;                  /* ignore other key releases */
 
     char c = shift_held ? kbd_us_upper[sc] : kbd_us_lower[sc];
-    if (c) vga_putc(c);
+    if (!c) return;
+
+    uint32_t next = (ring_head + 1) & RING_MASK;
+    if (next != ring_tail) {                /* drop char on overflow */
+        ring[ring_head] = c;
+        ring_head = next;
+    }
+}
+
+char keyboard_getchar(void) {
+    for (;;) {
+        __asm__ volatile ("cli");
+        if (ring_head != ring_tail) {
+            char c = ring[ring_tail];
+            ring_tail = (ring_tail + 1) & RING_MASK;
+            __asm__ volatile ("sti");
+            return c;
+        }
+        /* sti+hlt is atomic on x86: IRQ is serviced at the hlt boundary. */
+        __asm__ volatile ("sti; hlt");
+    }
 }
