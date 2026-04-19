@@ -74,3 +74,11 @@ void vga_write_dec(uint64_t n) {
     }
     while (i--) vga_putc(buf[i]);
 }
+
+void vga_write_hex(uint64_t n) {
+    static const char digits[] = "0123456789abcdef";
+    vga_write("0x");
+    for (int i = 60; i >= 0; i -= 4) {
+        vga_putc(digits[(n >> i) & 0xF]);
+    }
+}
